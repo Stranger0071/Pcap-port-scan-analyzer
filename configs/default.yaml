@@ -1,0 +1,28 @@
+# Default configuration for PcapSentinel
+
+window_seconds: 30
+state_ttl_seconds: 300
+max_tracked_sources: 50000
+
+port_scan:
+  min_distinct_ports: 20
+  window_seconds: 10
+  slow_window_seconds: 300
+  slow_min_distinct_ports: 40
+
+arp_spoof:
+  allowlist_macs: []
+
+dns_tunnel:
+  max_label_length: 40
+  min_entropy: 3.5
+  min_unique_subdomains: 30
+  domain_allowlist: []
+
+cleartext_creds:
+  enabled: true
+
+ml:
+  enabled: false
+  model_path: models/iforest.joblib
+  top_k: 10
