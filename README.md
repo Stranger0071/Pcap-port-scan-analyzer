@@ -99,6 +99,62 @@ Reports Generated:
 
 ---
 
+## Evaluation Harness
+
+PcapSentinel includes a built-in benchmark evaluation command that compares detector output against a declarative ground-truth labels file and prints Precision, Recall, and F1-score per detector.
+
+### Run the benchmark
+```bash
+python -m pcapsentinel evaluate --labels data/labels.yaml
+```
+
+### Example Output
+```text
+[+] Running benchmark evaluation with labels: data/labels.yaml
+
+========================================================================
+                   PCAPSENTINEL BENCHMARK EVALUATION
+========================================================================
+Captures Evaluated: 6
+
+DETECTOR PERFORMANCE:
+Detector             TP     FP     FN     Precision   Recall     F1-Score
+------------------------------------------------------------------------
+arp_spoof            1      0      0      1.000       1.000      1.000
+cleartext_creds      2      0      0      1.000       1.000      1.000
+dns_tunnel           1      0      0      1.000       1.000      1.000
+port_scan            2      0      0      1.000       1.000      1.000
+------------------------------------------------------------------------
+OVERALL              6      0      0      1.000       1.000      1.000
+========================================================================
+```
+
+### Labels Format (`data/labels.yaml`)
+```yaml
+- capture: tests/synthetic/syn_scan.pcap
+  split: tuning          # "tuning" (threshold calibration) or "held_out" (validation)
+  expected:
+    - detector: port_scan
+      scan_type: syn
+      src: 192.168.56.10
+
+- capture: tests/synthetic/benign.pcap
+  split: held_out
+  expected: []           # Zero alerts expected — false-positive check
+```
+
+### Evaluate CLI Options
+| Argument | Description | Default |
+|---|---|---|
+| `-l`, `--labels` | Path to ground-truth `labels.yaml` | `data/labels.yaml` |
+| `-c`, `--config` | Path to custom YAML configuration | `configs/default.yaml` |
+| `-b`, `--dataset-dir` | Base directory for resolving relative capture paths | `.` |
+| `-o`, `--out` | Save evaluation results as JSON to this file | _(none)_ |
+
+See [`docs/LIMITATIONS.md`](docs/LIMITATIONS.md) for a full list of known detector weaknesses, evasion cases, and threshold guidance.
+
+---
+
 ## Running Tests
 
 Run the complete automated test suite using `pytest`:

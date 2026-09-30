@@ -1,0 +1,39 @@
+# Ground truth labels for PcapSentinel evaluation harness
+
+- capture: tests/synthetic/syn_scan.pcap
+  split: tuning
+  expected:
+    - detector: port_scan
+      scan_type: syn
+      src: 192.168.56.10
+
+- capture: tests/synthetic/xmas_scan.pcap
+  split: tuning
+  expected:
+    - detector: port_scan
+      scan_type: xmas
+      src: 192.168.56.15
+
+- capture: tests/synthetic/cleartext_creds.pcap
+  split: tuning
+  expected:
+    - detector: cleartext_creds
+      src: 192.168.56.30
+    - detector: cleartext_creds
+      src: 192.168.56.30
+
+- capture: tests/synthetic/arp_spoof.pcap
+  split: held_out
+  expected:
+    - detector: arp_spoof
+      src: 00:0c:29:ab:cd:ef
+
+- capture: tests/synthetic/dns_tunnel.pcap
+  split: held_out
+  expected:
+    - detector: dns_tunnel
+      src: 192.168.56.99
+
+- capture: tests/synthetic/benign.pcap
+  split: held_out
+  expected: []

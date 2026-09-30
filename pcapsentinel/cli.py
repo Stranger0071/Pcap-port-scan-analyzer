@@ -13,6 +13,7 @@ from pcapsentinel.detectors.cleartext_creds import CleartextCredsDetector
 from pcapsentinel.detectors.dns_tunnel import DNSTunnelDetector
 from pcapsentinel.detectors.port_scan import PortScanDetector
 from pcapsentinel.engine import DetectionEngine
+from pcapsentinel.evaluation.evaluate import Evaluator
 from pcapsentinel.normalizer import normalize_packet
 from pcapsentinel.reader import StreamingPcapReader
 from pcapsentinel.reporters.json_reporter import JSONReporter
@@ -38,6 +39,23 @@ def build_parser() -> argparse.ArgumentParser:
     analyze_parser.add_argument("--window", type=float, default=None, help="Override window_seconds for port scan")
     analyze_parser.add_argument("--no-json", action="store_true", help="Disable report.json generation")
     analyze_parser.add_argument("--no-markdown", action="store_true", help="Disable report.md generation")
+
+    # evaluate command
+    eval_parser = subparsers.add_parser("evaluate", help="Evaluate detection accuracy against ground-truth labels")
+    eval_parser.add_argument("--labels", "-l", default="data/labels.yaml", help="Path to ground-truth labels.yaml")
+    eval_parser.add_argument("--config", "-c", default=None, help="Path to custom YAML config")
+    eval_parser.add_argument(
+        "--dataset-dir", "--base-dir", "-b",
+        dest="dataset_dir",
+        default=".",
+        help="Base directory for resolving relative capture paths in labels.yaml",
+    )
+    eval_parser.add_argument(
+        "--out", "-o",
+        default=None,
+        metavar="FILE",
+        help="Optional path to save evaluation results as JSON (e.g. eval_results.json)",
+    )
 
     return parser
 
@@ -162,6 +180,19 @@ def main(argv: List[str] | None = None) -> int:
         if result["json_report"]:
             print(f"  JSON     : {result['json_report']}")
         print()
+
+    elif args.command == "evaluate":
+        print(f"\n[+] Running benchmark evaluation with labels: {args.labels}")
+        try:
+            evaluator = Evaluator(labels_path=args.labels, base_dir=args.dataset_dir)
+            report = evaluator.evaluate_all(config_path=args.config)
+            print("\n" + report.format_table() + "\n")
+            if args.out:
+                saved = report.save_report(args.out)
+                print(f"[+] Evaluation results saved to: {saved}\n")
+        except Exception as e:
+            print(f"[-] Evaluation error: {e}", file=sys.stderr)
+            return 1
 
     return 0
 
