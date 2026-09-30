@@ -39,6 +39,7 @@ Thumbs.db
 Desktop.ini
 *.lnk
 
-# PCAP captures in data directory (keep synthetic tests, exclude large captures)
-data/lab_captures/*.pcap
-data/lab_captures/*.pcapng
+# Generated Reports
+reports/
+report.json
+report.md
