@@ -137,7 +137,24 @@ class Evaluator:
 
         return True
 
-    def evaluate_all(self, config_path: Optional[str | Path] = None) -> EvaluationReport:
+    def _matches_ml(self, alert: Alert, expected: ExpectedAlert) -> bool:
+        """Match an ML outlier to any labelled malicious activity.
+
+        Ground truth labels describe the attack type detected by deterministic
+        rules, not a separate ML-specific type.  ML is therefore scored as an
+        independent binary anomaly detector on the same capture labels.
+        """
+        if alert.src.lower() != expected.src.lower():
+            return False
+        if expected.start is not None and expected.end is not None:
+            return max(alert.start_ts, expected.start) <= min(alert.end_ts, expected.end)
+        return True
+
+    def evaluate_all(
+        self,
+        config_path: Optional[str | Path] = None,
+        overrides: Optional[Dict[str, Any]] = None,
+    ) -> EvaluationReport:
         """Run analysis on all labeled captures and calculate precision, recall, and F1."""
         from pcapsentinel.cli import run_analysis
 
@@ -159,17 +176,20 @@ class Evaluator:
             result = run_analysis(
                 capture_path=pcap_path,
                 config_path=config_path,
+                overrides=overrides,
                 emit_json=False,
                 emit_markdown=False,
             )
             alerts = result["alerts"]
+            rule_alerts = [alert for alert in alerts if alert.detector != "ml_anomaly"]
+            ml_alerts = [alert for alert in alerts if alert.detector == "ml_anomaly"]
 
             # Match alerts to expected labels
             matched_alerts: Set[int] = set()
             matched_expected: Set[int] = set()
 
             for exp_idx, exp in enumerate(label.expected):
-                for alt_idx, alert in enumerate(alerts):
+                for alt_idx, alert in enumerate(rule_alerts):
                     if alt_idx in matched_alerts:
                         continue
                     if self._matches(alert, exp):
@@ -180,7 +200,7 @@ class Evaluator:
             # Tabulate True Positives
             tp_count = len(matched_expected)
             fn_count = len(label.expected) - len(matched_expected)
-            fp_count = len(alerts) - len(matched_alerts)
+            fp_count = len(rule_alerts) - len(matched_alerts)
 
             # Update overall and split metrics
             report.overall.tp += tp_count
@@ -194,19 +214,39 @@ class Evaluator:
             # Update per-detector metrics
             for exp_idx in matched_expected:
                 det = label.expected[exp_idx].detector
-                if det in report.by_detector:
-                    report.by_detector[det].tp += 1
+                if det not in report.by_detector:
+                    report.by_detector[det] = MetricScore()
+                report.by_detector[det].tp += 1
 
             for exp_idx, exp in enumerate(label.expected):
                 if exp_idx not in matched_expected:
                     det = exp.detector
-                    if det in report.by_detector:
-                        report.by_detector[det].fn += 1
+                    if det not in report.by_detector:
+                        report.by_detector[det] = MetricScore()
+                    report.by_detector[det].fn += 1
 
-            for alt_idx, alert in enumerate(alerts):
+            for alt_idx, alert in enumerate(rule_alerts):
                 if alt_idx not in matched_alerts:
                     det = alert.detector
-                    if det in report.by_detector:
-                        report.by_detector[det].fp += 1
+                    if det not in report.by_detector:
+                        report.by_detector[det] = MetricScore()
+                    report.by_detector[det].fp += 1
+
+            # Score ML independently against the same expected attack labels.
+            # It is intentionally excluded from the deterministic overall and
+            # split scores above, which preserves their historical meaning.
+            if overrides and overrides.get("ml", {}).get("enabled"):
+                ml_score = report.by_detector.setdefault("ml_anomaly", MetricScore())
+                matched_ml_alerts: Set[int] = set()
+                matched_ml_expected: Set[int] = set()
+                for exp_idx, expected in enumerate(label.expected):
+                    for alt_idx, alert in enumerate(ml_alerts):
+                        if alt_idx not in matched_ml_alerts and self._matches_ml(alert, expected):
+                            matched_ml_alerts.add(alt_idx)
+                            matched_ml_expected.add(exp_idx)
+                            break
+                ml_score.tp += len(matched_ml_expected)
+                ml_score.fp += len(ml_alerts) - len(matched_ml_alerts)
+                ml_score.fn += len(label.expected) - len(matched_ml_expected)
 
         return report

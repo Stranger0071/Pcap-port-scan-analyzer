@@ -32,6 +32,8 @@ DEFAULT_CONFIG: Dict[str, Any] = {
         "enabled": False,
         "model_path": "models/iforest.joblib",
         "top_k": 10,
+        "window_seconds": 60.0,
+        "contamination": 0.05,
     },
 }
 

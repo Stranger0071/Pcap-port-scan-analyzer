@@ -58,6 +58,21 @@ python -m pcapsentinel analyze capture.pcap \
   --window 10.0
 ```
 
+### Train and Use the ML Anomaly Detector
+
+Train only on representative benign captures. The model scores fixed 60-second
+per-endpoint windows and emits only Isolation Forest outliers; its alerts are a
+triage signal, not a replacement for deterministic findings.
+
+```bash
+python -m pcapsentinel train --baseline tests/synthetic/benign.pcap --output models/iforest.joblib
+python -m pcapsentinel analyze capture.pcap --ml --model models/iforest.joblib --metrics reports/metrics.prom
+```
+
+Use `--window` and `--contamination` with `train` to tune the ML window and
+expected outlier fraction. To compare ML alerts with the normal benchmark,
+run `python -m pcapsentinel evaluate --ml --model models/iforest.joblib`.
+
 ### CLI Options
 | Argument | Description | Default |
 |---|---|---|
@@ -68,6 +83,9 @@ python -m pcapsentinel analyze capture.pcap \
 | `--window` | Override `port_scan.window_seconds` | `10.0` |
 | `--no-json` | Disable `report.json` generation | `False` |
 | `--no-markdown` | Disable `report.md` generation | `False` |
+| `--ml` | Enable ML anomaly detection (Isolation Forest) | `False` |
+| `--model` | Path to pre-trained ML model artifact | `models/iforest.joblib` |
+| `--metrics` | Export Prometheus text exposition metrics to file | _(none)_ |
 | `--version` | Display PcapSentinel version | — |
 
 ---

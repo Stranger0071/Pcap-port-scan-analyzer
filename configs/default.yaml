@@ -26,3 +26,5 @@ ml:
   enabled: false
   model_path: models/iforest.joblib
   top_k: 10
+  window_seconds: 60       # Feature aggregation window per source IP (seconds)
+  contamination: 0.05      # Expected anomaly fraction in training data (IsolationForest)

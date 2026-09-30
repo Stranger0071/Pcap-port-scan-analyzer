@@ -108,13 +108,32 @@ OVERALL              6      0      0      1.000       1.000      1.000
 
 ---
 
-## 6. Improvement Roadmap (Post Phase 4)
+---
+
+## 6. Comparative Analysis: Unsupervised ML vs. Deterministic Rule-Based Detectors
+
+Phase 5 introduced an unsupervised `IsolationForest` estimator trained on windowed per-source flow features. Below is the comparative analysis between deterministic rules and unsupervised flow scoring:
+
+| Dimension | Deterministic Rule-Based Detectors | ML Anomaly Detector (Isolation Forest) |
+|---|---|---|
+| **Explainability** | **High**: Alerts contain direct evidence (targeted port lists, entropy values, MAC binding histories). Clear causality. | **Moderate**: Alerts expose eight window features plus the three largest deviations from the trained baseline (e.g. `syn_to_synack_ratio`, `distinct_dst_ports`). |
+| **False Positive Behavior** | **Predictable**: Zero alerts on benign baselines when allowlists (e.g. CDN domains, VRRP MACs) are populated. | **Probabilistic**: Sensitive to benign traffic shifts (bursty transfers, new services, backups) not represented in the training baseline. |
+| **Novel / Stealth Attack Detection** | **Rigid**: Attacks engineered just below thresholds (e.g. low-and-slow scans under `slow_window_seconds`) evade detection. | **Flexible**: Novel multi-vector anomalies and non-standard scan flag/port distributions can be flagged if they deviate in feature space. |
+| **Operational Overhead** | **Zero Setup**: Works out of the box with default YAML thresholds; no training phase required. | **Requires Baseline**: Requires curated, representative benign pcap captures (`python -m pcapsentinel train`) before inference. |
+| **Memory & Performance** | **Streaming O(1)**: Bounded memory with TTL state eviction during single-pass packet ingestion. | **Windowed Buffering**: Buffers windowed state per source IP and evaluates tree estimators during stream finalization. |
+
+### Practical Deployment Recommendation
+Use rule-based detectors as the primary, authoritative alert source for high-confidence incident response. Deploy ML anomaly scoring in tandem (via `--ml`) as a secondary triage signal to highlight anomalous endpoints that warrant manual investigation or threshold fine-tuning.
+
+---
+
+## 7. Improvement Roadmap (Post Phase 5)
 
 | Priority | Improvement | Phase |
 |---|---|---|
-| High | TCP stream reassembly for fragmented credential detection | Phase 5+ |
-| High | Cross-source scan correlation for distributed port scans | Phase 5+ |
-| Medium | ICMP sweep and UDP scan detection | Phase 5+ |
-| Medium | `Proxy-Authorization` and SMTP AUTH PLAIN credential parsing | Phase 5+ |
+| High | TCP stream reassembly for fragmented credential detection | Future |
+| High | Cross-source scan correlation for distributed port scans | Future |
+| Medium | ICMP sweep and UDP scan detection | Future |
+| Medium | `Proxy-Authorization` and SMTP AUTH PLAIN credential parsing | Future |
 | Low | DoH/DoT decryption with known key material (SSLKEYLOGFILE) | Stretch |
 | Low | VXLAN / GRE decapsulation for tunneled threat detection | Stretch |
