@@ -8,7 +8,9 @@ from typing import Any, Dict, List
 from pcapsentinel import __version__
 from pcapsentinel.aggregator import AlertAggregator
 from pcapsentinel.config import load_config
+from pcapsentinel.detectors.arp_spoof import ARPSpoofDetector
 from pcapsentinel.detectors.cleartext_creds import CleartextCredsDetector
+from pcapsentinel.detectors.dns_tunnel import DNSTunnelDetector
 from pcapsentinel.detectors.port_scan import PortScanDetector
 from pcapsentinel.engine import DetectionEngine
 from pcapsentinel.normalizer import normalize_packet
@@ -63,6 +65,8 @@ def run_analysis(
     # Register detectors
     engine.register_detector(PortScanDetector(config))
     engine.register_detector(CleartextCredsDetector(config))
+    engine.register_detector(ARPSpoofDetector(config))
+    engine.register_detector(DNSTunnelDetector(config))
 
     # Process packet stream
     for raw_pkt in reader.read_packets():

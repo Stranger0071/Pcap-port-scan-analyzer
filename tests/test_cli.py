@@ -64,6 +64,23 @@ def test_analyze_benign_traffic(tmp_path: Path):
     assert len(result["alerts"]) == 0
 
 
+def test_analyze_arp_spoof(tmp_path: Path):
+    result = run_analysis("tests/synthetic/arp_spoof.pcap", out_dir=tmp_path)
+    assert len(result["alerts"]) >= 1
+    alert = result["alerts"][0]
+    assert alert.detector == "arp_spoof"
+    assert alert.src == "00:0c:29:ab:cd:ef"
+    assert alert.evidence["victim_ip"] == "192.168.56.1"
+
+
+def test_analyze_dns_tunnel(tmp_path: Path):
+    result = run_analysis("tests/synthetic/dns_tunnel.pcap", out_dir=tmp_path)
+    assert len(result["alerts"]) >= 1
+    alert = result["alerts"][0]
+    assert alert.detector == "dns_tunnel"
+    assert alert.evidence["parent_domain"] == "exfil.org"
+
+
 def test_cli_main_invocation(tmp_path: Path, capsys):
     exit_code = main(["analyze", str(SYN_PCAP), "--out-dir", str(tmp_path)])
     assert exit_code == 0
